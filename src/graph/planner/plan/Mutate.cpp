@@ -24,6 +24,15 @@ std::unique_ptr<PlanNodeDescription> InsertVertices::explain() const {
     tagPropsArr.push_back(obj);
   }
   addDescription("tagPropNames", folly::toJson(tagPropsArr), desc.get());
+
+  folly::dynamic tagVectorPropsArr = folly::dynamic::array();
+  for (const auto &p : tagVectorPropNames_) {
+    folly::dynamic obj = folly::dynamic::object();
+    obj.insert("tagId", p.first);
+    obj.insert("vectorProps", util::toJson(p.second));
+    tagVectorPropsArr.push_back(obj);
+  }
+  addDescription("tagVectorPropNames", folly::toJson(tagVectorPropsArr), desc.get());
   addDescription("vertices", folly::toJson(util::toJson(vertices_)), desc.get());
   return desc;
 }

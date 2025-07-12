@@ -88,6 +88,21 @@ void Part::asyncMultiPut(const std::vector<KV>& keyValues, KVCallback cb) {
           [callback = std::move(cb)](nebula::cpp2::ErrorCode code) mutable { callback(code); });
 }
 
+void Part::asyncMultiPut(const std::vector<KV>& keyValues,
+                         KVCallback cb,
+                         const std::string& cfName) {
+  if (cfName.empty() || cfName == NebulaKeyUtils::kDefaultColumnFamilyName) {
+    return asyncMultiPut(keyValues, std::move(cb));
+  }
+  if (cfName == NebulaKeyUtils::kVectorColumnFamilyName) {
+    std::string log = encodeMultiValues(OP_MULTI_PUT_VECTOR, keyValues);
+
+    appendAsync(FLAGS_cluster_id, std::move(log))
+        .thenValue(
+            [callback = std::move(cb)](nebula::cpp2::ErrorCode code) mutable { callback(code); });
+  }
+}
+
 void Part::asyncRemove(folly::StringPiece key, KVCallback cb) {
   std::string log = encodeSingleValue(OP_REMOVE, key);
 
@@ -102,6 +117,21 @@ void Part::asyncMultiRemove(const std::vector<std::string>& keys, KVCallback cb)
   appendAsync(FLAGS_cluster_id, std::move(log))
       .thenValue(
           [callback = std::move(cb)](nebula::cpp2::ErrorCode code) mutable { callback(code); });
+}
+
+void Part::asyncMultiRemove(const std::vector<std::string>& keys,
+                            KVCallback cb,
+                            const std::string& cfName) {
+  if (cfName.empty() || cfName == NebulaKeyUtils::kDefaultColumnFamilyName) {
+    return asyncMultiRemove(keys, std::move(cb));
+  }
+  if (cfName == NebulaKeyUtils::kVectorColumnFamilyName) {
+    std::string log = encodeMultiValues(OP_MULTI_REMOVE_VECTOR, keys);
+
+    appendAsync(FLAGS_cluster_id, std::move(log))
+        .thenValue(
+            [callback = std::move(cb)](nebula::cpp2::ErrorCode code) mutable { callback(code); });
+  }
 }
 
 void Part::asyncRemoveRange(folly::StringPiece start, folly::StringPiece end, KVCallback cb) {
@@ -259,6 +289,25 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
         }
         break;
       }
+      case OP_MULTI_PUT_VECTOR: {
+        auto kvs = decodeMultiValues(log);
+        // Make the number of values are an even number
+        DCHECK_EQ((kvs.size() + 1) / 2, kvs.size() / 2);
+        for (size_t i = 0; i < kvs.size(); i += 2) {
+          VLOG(4) << "OP_MULTI_PUT_VECTOR " << folly::hexlify(kvs[i])
+                  << ", val = " << folly::hexlify(kvs[i + 1]);
+          auto code = batch->put(NebulaKeyUtils::kVectorColumnFamilyName, kvs[i], kvs[i + 1]);
+#ifndef NDEBUG
+          LOG(ERROR) << "OP_MULTI_PUT_VECTOR: " << i << ", key = " << folly::hexlify(kvs[i])
+                     << ", val = " << folly::hexlify(kvs[i + 1]);
+#endif
+          if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            VLOG(3) << idStr_ << "Failed to call WriteBatch::put() for vector";
+            return {code, kNoCommitLogId, kNoCommitLogTerm};
+          }
+        }
+        break;
+      }
       case OP_REMOVE: {
         auto key = decodeSingleValue(log);
         auto code = batch->remove(key);
@@ -274,6 +323,17 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
           auto code = batch->remove(k);
           if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
             VLOG(3) << idStr_ << "Failed to call WriteBatch::remove()";
+            return {code, kNoCommitLogId, kNoCommitLogTerm};
+          }
+        }
+        break;
+      }
+      case OP_MULTI_REMOVE_VECTOR: {
+        auto keys = decodeMultiValues(log);
+        for (auto k : keys) {
+          auto code = batch->remove(NebulaKeyUtils::kVectorColumnFamilyName, k);
+          if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+            VLOG(3) << idStr_ << "Failed to call WriteBatch::remove() for vector";
             return {code, kNoCommitLogId, kNoCommitLogTerm};
           }
         }

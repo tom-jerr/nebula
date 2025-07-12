@@ -230,7 +230,7 @@ class NebulaSchemaProvider {
   size_t getVectorNumFields() const noexcept;
   size_t getVectorNumNullableFields() const noexcept;
   size_t vectorSize() const noexcept;
-
+  size_t vectorSize(size_t index) const noexcept;
   int64_t getVectorFieldIndex(const std::string& name) const;
   const char* getVectorFieldName(int64_t index) const;
 
@@ -243,9 +243,9 @@ class NebulaSchemaProvider {
   void addVectorField(const std::string& name,
                       nebula::cpp2::PropertyType type,
                       size_t fixedStrLen,
-                      bool nullable,
-                      std::string defaultValue,
-                      cpp2::GeoShape geoShape);
+                      bool nullable = false,
+                      std::string defaultValue = "",
+                      cpp2::GeoShape geoShape = cpp2::GeoShape::ANY);
   VectorIterator vecbegin() const {
     return VectorIterator(this, 0);
   }
@@ -262,6 +262,10 @@ class NebulaSchemaProvider {
 
   bool hasNullableCol() const {
     return numNullableFields_ != 0 && numVectorNullableFields_ != 0;
+  }
+
+  bool hasVectorCol() const {
+    return !vector_fields_.empty();
   }
 
  private:

@@ -434,6 +434,13 @@ TagSchemas MetaClient::buildTagSchemas(std::vector<cpp2::TagItem> tagItemVec) {
     for (const auto& colIt : tagIt.get_schema().get_columns()) {
       addSchemaField(schema.get(), colIt);
     }
+    if (tagIt.get_schema().get_vector_columns() != nullptr) {
+      // handle vector columns
+      LOG(ERROR) << "MetaClient::buildTagSchemas: tag schema has vector columns";
+      for (const auto& colIt : *tagIt.get_schema().get_vector_columns()) {
+        addSchemaVectorField(schema.get(), colIt);
+      }
+    }
     // handle schema property
     schema->setProp(tagIt.get_schema().get_schema_prop());
     auto& schemas = tagSchemas[tagIt.get_tag_id()];
@@ -486,6 +493,21 @@ void MetaClient::addSchemaField(NebulaSchemaProvider* schema, const cpp2::Column
   }
 
   schema->addField(col.get_name(), colType.get_type(), len, nullable, encoded, geoShape);
+}
+
+void MetaClient::addSchemaVectorField(NebulaSchemaProvider* schema, const cpp2::ColumnDef& col) {
+  memory::MemoryCheckOffGuard g;
+  bool hasDef = col.default_value_ref().has_value();
+  auto& colType = col.get_type();
+  size_t len = colType.type_length_ref().has_value() ? *colType.get_type_length() : 0;
+  cpp2::GeoShape geoShape = cpp2::GeoShape::ANY;
+  bool nullable = col.nullable_ref().has_value() ? *col.get_nullable() : false;
+  std::string encoded;
+  if (hasDef) {
+    encoded = *col.get_default_value();
+  }
+
+  schema->addVectorField(col.get_name(), colType.get_type(), len, nullable, encoded, geoShape);
 }
 
 bool MetaClient::loadSchemas(GraphSpaceID spaceId,

@@ -30,7 +30,8 @@ folly::Future<Status> InsertVerticesExecutor::insertVertices() {
                     ivNode->getVertices(),
                     ivNode->getPropNames(),
                     ivNode->getIfNotExists(),
-                    ivNode->getIgnoreExistedIndex())
+                    ivNode->getIgnoreExistedIndex(),
+                    ivNode->getVectorPropNames())
       .via(runner())
       .ensure([addVertTime]() {
         VLOG(1) << "Add vertices time: " << addVertTime.elapsedInUSec() << "us";

@@ -24,6 +24,8 @@ enum LogType : char {
   OP_ADD_PEER = 0x09,
   OP_REMOVE_PEER = 0x10,
   OP_BATCH_WRITE = 0x11,
+  OP_MULTI_PUT_VECTOR = 0x12,     // for vector data
+  OP_MULTI_REMOVE_VECTOR = 0x13,  // for vector data
 };
 
 enum BatchLogType : char {

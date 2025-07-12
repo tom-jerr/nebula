@@ -768,6 +768,25 @@ nebula::cpp2::ErrorCode NebulaStore::get(GraphSpaceID spaceId,
   return part->engine()->get(key, value, snapshot);
 }
 
+nebula::cpp2::ErrorCode NebulaStore::get(GraphSpaceID spaceId,
+                                         PartitionID partId,
+                                         const std::string& key,
+                                         std::string* value,
+                                         const std::string& cfName,
+                                         bool canReadFromFollower,
+                                         const void* snapshot) {
+  auto ret = part(spaceId, partId);
+  if (!ok(ret)) {
+    return error(ret);
+  }
+  auto part = nebula::value(ret);
+  if (!checkLeader(part, canReadFromFollower)) {
+    return part->isLeader() ? nebula::cpp2::ErrorCode::E_LEADER_LEASE_FAILED
+                            : nebula::cpp2::ErrorCode::E_LEADER_CHANGED;
+  }
+  return part->engine()->get(cfName, key, value, snapshot);
+}
+
 const void* NebulaStore::GetSnapshot(GraphSpaceID spaceId, PartitionID partId) {
   auto ret = part(spaceId, partId);
   if (!ok(ret)) {
@@ -846,6 +865,24 @@ nebula::cpp2::ErrorCode NebulaStore::prefix(GraphSpaceID spaceId,
   return part->engine()->prefix(prefix, iter, snapshot);
 }
 
+nebula::cpp2::ErrorCode NebulaStore::prefix(const std::string& cfName,
+                                            GraphSpaceID spaceId,
+                                            PartitionID partId,
+                                            const std::string& prefix,
+                                            std::unique_ptr<KVIterator>* iter,
+                                            bool canReadFromFollower,
+                                            const void* snapshot) {
+  auto ret = part(spaceId, partId);
+  if (!ok(ret)) {
+    return error(ret);
+  }
+  auto part = nebula::value(ret);
+  if (!checkLeader(part, canReadFromFollower)) {
+    return nebula::cpp2::ErrorCode::E_LEADER_CHANGED;
+  }
+  return part->engine()->prefix(cfName, prefix, iter, snapshot);
+}
+
 nebula::cpp2::ErrorCode NebulaStore::rangeWithPrefix(GraphSpaceID spaceId,
                                                      PartitionID partId,
                                                      const std::string& start,
@@ -908,6 +945,20 @@ void NebulaStore::asyncMultiPut(GraphSpaceID spaceId,
   part->asyncMultiPut(std::move(keyValues), std::move(cb));
 }
 
+void NebulaStore::asyncMultiPut(GraphSpaceID spaceId,
+                                PartitionID partId,
+                                std::vector<KV>&& keyValues,
+                                KVCallback cb,
+                                const std::string& cfName) {
+  auto ret = part(spaceId, partId);
+  if (!ok(ret)) {
+    cb(error(ret));
+    return;
+  }
+  auto part = nebula::value(ret);
+  part->asyncMultiPut(std::move(keyValues), std::move(cb), cfName);
+}
+
 void NebulaStore::asyncRemove(GraphSpaceID spaceId,
                               PartitionID partId,
                               const std::string& key,
@@ -932,6 +983,20 @@ void NebulaStore::asyncMultiRemove(GraphSpaceID spaceId,
   }
   auto part = nebula::value(ret);
   part->asyncMultiRemove(std::move(keys), std::move(cb));
+}
+
+void NebulaStore::asyncMultiRemove(GraphSpaceID spaceId,
+                                   PartitionID partId,
+                                   std::vector<std::string>&& keys,
+                                   KVCallback cb,
+                                   const std::string& cfName) {
+  auto ret = part(spaceId, partId);
+  if (!ok(ret)) {
+    cb(error(ret));
+    return;
+  }
+  auto part = nebula::value(ret);
+  part->asyncMultiRemove(std::move(keys), std::move(cb), cfName);
 }
 
 void NebulaStore::asyncRemoveRange(GraphSpaceID spaceId,

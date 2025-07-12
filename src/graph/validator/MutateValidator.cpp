@@ -30,7 +30,8 @@ Status InsertVerticesValidator::toPlan() {
                                      std::move(vertices_),
                                      std::move(tagPropNames_),
                                      ifNotExists_,
-                                     ignoreExistedIndex_);
+                                     ignoreExistedIndex_,
+                                     std::move(tagVectorPropNames_));
   root_ = doNode;
   tail_ = root_;
   return Status::OK();
@@ -70,6 +71,7 @@ Status InsertVerticesValidator::check() {
     }
 
     std::vector<std::string> names;
+    std::vector<std::string> vectorNames;
     if (item->isDefaultPropNames()) {
       size_t numFields = schema->getNumFields();
       for (size_t i = 0; i < numFields; ++i) {
@@ -77,19 +79,34 @@ Status InsertVerticesValidator::check() {
         names.emplace_back(propName);
       }
       propSize_ += numFields;
+      if (schema->hasVectorCol()) {
+        size_t numVecFields = schema->getVectorNumFields();
+        for (size_t i = 0; i < numVecFields; ++i) {
+          const char *vecPropName = schema->getVectorFieldName(i);
+          vectorNames.emplace_back(vecPropName);
+        }
+        propSize_ += numVecFields;
+      }
     } else {
       auto props = item->properties();
       // Check prop name is in schema
       for (auto *it : props) {
         if (schema->getFieldIndex(*it) < 0) {
-          LOG(ERROR) << "Unknown column `" << *it << "' in schema";
-          return Status::SemanticError("Unknown column `%s' in schema", it->c_str());
+          // check vector property
+          if (schema->getVectorFieldIndex(*it) < 0) {
+            LOG(ERROR) << "Unknown column `" << *it << "' in schema";
+            return Status::SemanticError("Unknown column `%s' in schema", it->c_str());
+          }
+          vectorNames.emplace_back(*it);
+          propSize_++;
+          continue;
         }
         propSize_++;
         names.emplace_back(*it);
       }
     }
     tagPropNames_[tagId] = names;
+    tagVectorPropNames_[tagId] = vectorNames;
     schemas_.emplace_back(tagId, schema);
   }
   return Status::OK();
@@ -97,6 +114,7 @@ Status InsertVerticesValidator::check() {
 
 // Check validity of vertices data.
 // Check vid type, check properties value, fill to NewVertex structure.
+// The inserted value must follow the order of first other property, then vector property.
 Status InsertVerticesValidator::prepareVertices() {
   vertices_.reserve(rows_.size());
   for (auto i = 0u; i < rows_.size(); i++) {
@@ -130,14 +148,27 @@ Status InsertVerticesValidator::prepareVertices() {
       auto schema = schemas_[count].second;
       auto &propNames = tagPropNames_[tagId];
       std::vector<Value> props;
+      std::vector<Value> vectorProps;
       props.reserve(propNames.size());
       for (auto index = 0u; index < propNames.size(); index++) {
         props.emplace_back(std::move(values[handleValueNum]));
         handleValueNum++;
       }
+      bool hasVectorCol = schema->hasVectorCol();
+      if (hasVectorCol) {
+        auto &vectorPropNames = tagVectorPropNames_[tagId];
+        vectorProps.reserve(vectorPropNames.size());
+        for (auto index = 0u; index < vectorPropNames.size(); index++) {
+          vectorProps.emplace_back(std::move(values[handleValueNum]));
+          handleValueNum++;
+        }
+      }
       auto &tag = tags[count];
       tag.tag_id_ref() = tagId;
       tag.props_ref() = std::move(props);
+      if (hasVectorCol) {
+        tag.vec_props_ref() = std::move(vectorProps);
+      }
     }
 
     storage::cpp2::NewVertex vertex;

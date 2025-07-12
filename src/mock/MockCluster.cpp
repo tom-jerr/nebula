@@ -251,6 +251,8 @@ std::unique_ptr<meta::SchemaManager> MockCluster::memSchemaMan(SchemaVer schemaV
     schemaMan->addTagSchema(spaceId, 1, MockData::mockPlayerTagSchema(&pool_, ver, hasProp));
     // When tagId is 2, use teams data
     schemaMan->addTagSchema(spaceId, 2, MockData::mockTeamTagSchema(ver, hasProp));
+    // When tagId is 4, use vector data
+    schemaMan->addTagSchema(spaceId, 4, MockData::mockVectorTagSchema(ver, hasProp));
 
     // Edge has two type: serve and teammate
     // When edgeType is 101, use serve data
@@ -266,20 +268,21 @@ std::unique_ptr<meta::SchemaManager> MockCluster::memSchemaMan(SchemaVer schemaV
   return schemaMan;
 }
 
-std::unique_ptr<meta::IndexManager> MockCluster::memIndexMan(GraphSpaceID spaceId, bool hasProp) {
+std::unique_ptr<meta::IndexManager> MockCluster::memIndexMan(GraphSpaceID spaceId, bool) {
   auto indexMan = std::make_unique<AdHocIndexManager>();
-  if (hasProp) {
-    indexMan->addTagIndex(spaceId, 1, 1, MockData::mockPlayerTagIndexColumns());
-    indexMan->addTagIndex(spaceId, 2, 2, MockData::mockTeamTagIndexColumns());
-    indexMan->addTagIndex(spaceId, 3, 3, MockData::mockGeneralTagIndexColumns());
-    indexMan->addEdgeIndex(spaceId, 101, 101, MockData::mockServeEdgeIndexColumns());
-    indexMan->addEdgeIndex(spaceId, 102, 102, MockData::mockTeammateEdgeIndexColumns());
-  }
+  indexMan->addEmptyTagIndex(spaceId);
+  // if (hasProp) {
+  //   indexMan->addTagIndex(spaceId, 1, 1, MockData::mockPlayerTagIndexColumns());
+  //   indexMan->addTagIndex(spaceId, 2, 2, MockData::mockTeamTagIndexColumns());
+  //   indexMan->addTagIndex(spaceId, 3, 3, MockData::mockGeneralTagIndexColumns());
+  //   indexMan->addEdgeIndex(spaceId, 101, 101, MockData::mockServeEdgeIndexColumns());
+  //   indexMan->addEdgeIndex(spaceId, 102, 102, MockData::mockTeammateEdgeIndexColumns());
+  // }
 
-  indexMan->addTagIndex(spaceId, 1, 4, {});
-  indexMan->addTagIndex(spaceId, 2, 5, {});
-  indexMan->addEdgeIndex(spaceId, 101, 103, {});
-  indexMan->addEdgeIndex(spaceId, 102, 104, {});
+  // indexMan->addTagIndex(spaceId, 1, 4, {});
+  // indexMan->addTagIndex(spaceId, 2, 5, {});
+  // indexMan->addEdgeIndex(spaceId, 101, 103, {});
+  // indexMan->addEdgeIndex(spaceId, 102, 104, {});
   return indexMan;
 }
 

@@ -82,7 +82,7 @@ class Part : public raftex::RaftPart {
    * @param cb Callback when has a result
    */
   void asyncMultiPut(const std::vector<KV>& keyValues, KVCallback cb);
-
+  void asyncMultiPut(const std::vector<KV>& keyValues, KVCallback cb, const std::string& cfName);
   /**
    * @brief Remove a key from kvstore asynchronously
    *
@@ -98,6 +98,9 @@ class Part : public raftex::RaftPart {
    * @param cb Callback when has a result
    */
   void asyncMultiRemove(const std::vector<std::string>& keys, KVCallback cb);
+  void asyncMultiRemove(const std::vector<std::string>& keys,
+                        KVCallback cb,
+                        const std::string& cfName);
 
   /**
    * @brief Remove keys in range [start, end) asynchronously

@@ -109,6 +109,11 @@ class BaseProcessor {
 
   void doPut(GraphSpaceID spaceId, PartitionID partId, std::vector<kvstore::KV>&& data);
 
+  void doPut(const std::string& cfName,
+             GraphSpaceID spaceId,
+             PartitionID partId,
+             std::vector<kvstore::KV>&& data);
+
   void doRemove(GraphSpaceID spaceId, PartitionID partId, std::vector<std::string>&& keys);
 
   void doRemoveRange(GraphSpaceID spaceId,
@@ -137,6 +142,11 @@ class BaseProcessor {
                                      const std::vector<std::string>& propNames,
                                      const std::vector<Value>& props,
                                      WriteResult& wRet);
+
+  StatusOr<std::string> encodeVectorRowVal(const meta::NebulaSchemaProvider* schema,
+                                           const Value& props,
+                                           size_t index,
+                                           WriteResult& wRet);
 
   virtual void profileDetail(const std::string& name, int32_t latency) {
     if (!profileDetail_.count(name)) {

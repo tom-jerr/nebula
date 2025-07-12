@@ -220,7 +220,13 @@ class NebulaStore : public KVStore, public Handler {
                               std::string* value,
                               bool canReadFromFollower = false,
                               const void* snapshot = nullptr) override;
-
+  nebula::cpp2::ErrorCode get(GraphSpaceID spaceId,
+                              PartitionID partId,
+                              const std::string& key,
+                              std::string* value,
+                              const std::string& cfName,
+                              bool canReadFromFollower = false,
+                              const void* snapshot = nullptr) override;
   /**
    * @brief Read a list of keys
    *
@@ -284,7 +290,13 @@ class NebulaStore : public KVStore, public Handler {
                                  std::unique_ptr<KVIterator>* iter,
                                  bool canReadFromFollower = false,
                                  const void* snapshot = nullptr) override;
-
+  nebula::cpp2::ErrorCode prefix(const std::string& cfName,
+                                 GraphSpaceID spaceId,
+                                 PartitionID partId,
+                                 const std::string& prefix,
+                                 std::unique_ptr<KVIterator>* iter,
+                                 bool canReadFromFollower = false,
+                                 const void* snapshot = nullptr) override;
   /**
    * @brief To forbid to pass rvalue via the 'prefix' parameter.
    */
@@ -294,7 +306,13 @@ class NebulaStore : public KVStore, public Handler {
                                  std::unique_ptr<KVIterator>* iter,
                                  bool canReadFromFollower = false,
                                  const void* snapshot = nullptr) override = delete;
-
+  nebula::cpp2::ErrorCode prefix(const std::string& cfName,
+                                 GraphSpaceID spaceId,
+                                 PartitionID partId,
+                                 std::string&& prefix,
+                                 std::unique_ptr<KVIterator>* iter,
+                                 bool canReadFromFollower = false,
+                                 const void* snapshot = nullptr) override = delete;
   /**
    * @brief Get all results with 'prefix' str as prefix starting form 'start'
    *
@@ -344,7 +362,11 @@ class NebulaStore : public KVStore, public Handler {
                      PartitionID partId,
                      std::vector<KV>&& keyValues,
                      KVCallback cb) override;
-
+  void asyncMultiPut(GraphSpaceID spaceId,
+                     PartitionID partId,
+                     std::vector<KV>&& keyValues,
+                     KVCallback cb,
+                     const std::string& cfName) override;
   /**
    * @brief Remove a key from kvstore asynchronously
    *
@@ -370,6 +392,12 @@ class NebulaStore : public KVStore, public Handler {
                         PartitionID partId,
                         std::vector<std::string>&& keys,
                         KVCallback cb) override;
+
+  void asyncMultiRemove(GraphSpaceID spaceId,
+                        PartitionID partId,
+                        std::vector<std::string>&& keys,
+                        KVCallback cb,
+                        const std::string& cfName) override;
 
   /**
    * @brief Remove keys in range [start, end) asynchronously

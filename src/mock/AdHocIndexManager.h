@@ -7,6 +7,7 @@
 #define MOCK_ADHOCINDEXMANAGER_H_
 
 #include "common/meta/IndexManager.h"
+#include "common/thrift/ThriftTypes.h"
 #include "interface/gen-cpp2/meta_types.h"
 
 namespace nebula {
@@ -18,6 +19,8 @@ class AdHocIndexManager final : public nebula::meta::IndexManager {
  public:
   AdHocIndexManager() = default;
   ~AdHocIndexManager() = default;
+
+  void addEmptyTagIndex(GraphSpaceID space);
 
   void addTagIndex(GraphSpaceID space,
                    TagID tagID,

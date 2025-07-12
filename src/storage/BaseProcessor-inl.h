@@ -118,6 +118,19 @@ void BaseProcessor<RESP>::doPut(GraphSpaceID spaceId,
 }
 
 template <typename RESP>
+void BaseProcessor<RESP>::doPut(const std::string& cfName,
+                                GraphSpaceID spaceId,
+                                PartitionID partId,
+                                std::vector<kvstore::KV>&& data) {
+  this->env_->kvstore_->asyncMultiPut(
+      spaceId,
+      partId,
+      std::move(data),
+      [spaceId, partId, this](nebula::cpp2::ErrorCode code) { handleAsync(spaceId, partId, code); },
+      cfName);
+}
+
+template <typename RESP>
 void BaseProcessor<RESP>::doRemove(GraphSpaceID spaceId,
                                    PartitionID partId,
                                    std::vector<std::string>&& keys) {
@@ -163,6 +176,26 @@ StatusOr<std::string> BaseProcessor<RESP>::encodeRowVal(const meta::NebulaSchema
   }
 
   wRet = rowWrite.finish();
+  if (wRet != WriteResult::SUCCEEDED) {
+    return Status::Error("Add field failed");
+  }
+
+  return std::move(rowWrite).moveEncodedStr();
+}
+
+template <typename RESP>
+StatusOr<std::string> BaseProcessor<RESP>::encodeVectorRowVal(
+    const meta::NebulaSchemaProvider* schema, const Value& props, size_t index, WriteResult& wRet) {
+  RowWriterV2 rowWrite(schema, true);
+  // If req.prop_names is not empty, use the property name in req.prop_names
+  // Otherwise, use property name in schema
+
+  wRet = rowWrite.setValueVec(index, props);
+  if (wRet != WriteResult::SUCCEEDED) {
+    return Status::Error("Add field failed");
+  }
+
+  wRet = rowWrite.finishVector();
   if (wRet != WriteResult::SUCCEEDED) {
     return Status::Error("Add field failed");
   }

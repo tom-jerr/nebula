@@ -51,6 +51,7 @@ class GetTagPropNode : public QueryNode<VertexID> {
     if (!std::any_of(tagNodes_.begin(), tagNodes_.end(), [](const auto& tagNode) {
           return tagNode->valid();
         })) {
+      // TODO(LZY): Fetch for vector type
       if (FLAGS_use_vertex_key) {
         auto kvstore = context_->env()->kvstore_;
         auto vertexKey = NebulaKeyUtils::vertexKey(context_->vIdLen(), partId, vId);

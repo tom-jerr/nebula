@@ -15,20 +15,23 @@ namespace nebula {
 namespace graph {
 class InsertVertices final : public SingleDependencyNode {
  public:
-  static InsertVertices* make(QueryContext* qctx,
-                              PlanNode* input,
-                              GraphSpaceID spaceId,
-                              std::vector<storage::cpp2::NewVertex> vertices,
-                              std::unordered_map<TagID, std::vector<std::string>> tagPropNames,
-                              bool ifNotExists,
-                              bool ignoreExistedIndex) {
+  static InsertVertices* make(
+      QueryContext* qctx,
+      PlanNode* input,
+      GraphSpaceID spaceId,
+      std::vector<storage::cpp2::NewVertex> vertices,
+      std::unordered_map<TagID, std::vector<std::string>> tagPropNames,
+      bool ifNotExists,
+      bool ignoreExistedIndexm,
+      std::unordered_map<TagID, std::vector<std::string>> tagVectorPropNames) {
     return qctx->objPool()->makeAndAdd<InsertVertices>(qctx,
                                                        input,
                                                        spaceId,
                                                        std::move(vertices),
                                                        std::move(tagPropNames),
                                                        ifNotExists,
-                                                       ignoreExistedIndex);
+                                                       ignoreExistedIndexm,
+                                                       std::move(tagVectorPropNames));
   }
 
   std::unique_ptr<PlanNodeDescription> explain() const override;
@@ -53,6 +56,10 @@ class InsertVertices final : public SingleDependencyNode {
     return ignoreExistedIndex_;
   }
 
+  const std::unordered_map<TagID, std::vector<std::string>>& getVectorPropNames() const {
+    return tagVectorPropNames_;
+  }
+
  private:
   friend ObjectPool;
   InsertVertices(QueryContext* qctx,
@@ -61,13 +68,15 @@ class InsertVertices final : public SingleDependencyNode {
                  std::vector<storage::cpp2::NewVertex> vertices,
                  std::unordered_map<TagID, std::vector<std::string>> tagPropNames,
                  bool ifNotExists,
-                 bool ignoreExistedIndex)
+                 bool ignoreExistedIndex,
+                 std::unordered_map<TagID, std::vector<std::string>> tagVectorPropNames)
       : SingleDependencyNode(qctx, Kind::kInsertVertices, input),
         spaceId_(spaceId),
         vertices_(std::move(vertices)),
         tagPropNames_(std::move(tagPropNames)),
         ifNotExists_(ifNotExists),
-        ignoreExistedIndex_(ignoreExistedIndex) {}
+        ignoreExistedIndex_(ignoreExistedIndex),
+        tagVectorPropNames_(std::move(tagVectorPropNames)) {}
 
  private:
   GraphSpaceID spaceId_{-1};
@@ -75,6 +84,7 @@ class InsertVertices final : public SingleDependencyNode {
   std::unordered_map<TagID, std::vector<std::string>> tagPropNames_;
   bool ifNotExists_{false};
   bool ignoreExistedIndex_{false};
+  std::unordered_map<TagID, std::vector<std::string>> tagVectorPropNames_;
 };
 
 class InsertEdges final : public SingleDependencyNode {

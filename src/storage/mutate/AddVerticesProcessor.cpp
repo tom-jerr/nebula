@@ -74,12 +74,15 @@ void AddVerticesProcessor::process(const cpp2::AddVerticesRequest& req) {
 void AddVerticesProcessor::doProcess(const cpp2::AddVerticesRequest& req) {
   const auto& partVertices = req.get_parts();
   const auto& propNamesMap = req.get_prop_names();
+  const auto& vectorPropNamesMap = req.get_vector_prop_names();
   for (auto& part : partVertices) {
     auto partId = part.first;
     const auto& vertices = part.second;
 
     std::vector<kvstore::KV> data;
     data.reserve(32);
+    std::vector<kvstore::KV> vectorData;
+    bool hasVectorProp = false;
     auto code = nebula::cpp2::ErrorCode::SUCCEEDED;
     std::unordered_set<std::string> visited;
     visited.reserve(vertices.size());
@@ -93,13 +96,13 @@ void AddVerticesProcessor::doProcess(const cpp2::AddVerticesRequest& req) {
         code = nebula::cpp2::ErrorCode::E_INVALID_VID;
         break;
       }
+      // TODO(LZY): Insert for vector property
       if (FLAGS_use_vertex_key) {
         data.emplace_back(NebulaKeyUtils::vertexKey(spaceVidLen_, partId, vid), "");
       }
       for (auto& newTag : newTags) {
         auto tagId = newTag.get_tag_id();
         VLOG(3) << "PartitionID: " << partId << ", VertexID: " << vid << ", TagID: " << tagId;
-
         auto schemaIter = tagSchema_.find(tagId);
         if (schemaIter == tagSchema_.end()) {
           LOG(ERROR) << "Space " << spaceId_ << ", Tag " << tagId << " invalid";
@@ -138,13 +141,71 @@ void AddVerticesProcessor::doProcess(const cpp2::AddVerticesRequest& req) {
           break;
         }
         data.emplace_back(std::move(key), std::move(retEnc.value()));
+        // for vector property
+        auto opt_vec_props = newTag.get_vec_props();
+        if (opt_vec_props == nullptr) {
+          continue;
+        }
+        if (!hasVectorProp) {
+          hasVectorProp = true;
+          vectorData.reserve(opt_vec_props->size());
+        }
+        std::vector<std::string> vectorPropNames;
+        if (vectorPropNamesMap != nullptr) {
+          LOG(ERROR) << "Vector property names map is not null";
+          auto vecIter = vectorPropNamesMap->find(tagId);
+          if (vecIter != vectorPropNamesMap->end()) {
+            vectorPropNames = vecIter->second;
+          }
+        }
+        size_t vec_prop_index = 0;
+        if (vectorPropNames.empty()) {
+          for (auto& vec_prop : *opt_vec_props) {
+            auto vec_key =
+                NebulaKeyUtils::vectorTagKey(spaceVidLen_, partId, vid, tagId, vec_prop_index);
+            auto vec_value = encodeVectorRowVal(schema, vec_prop, vec_prop_index, wRet);
+            if (!vec_value.ok()) {
+              LOG(ERROR) << vec_value.status();
+              code = writeResultTo(wRet, false);
+              break;
+            }
+            vectorData.emplace_back(std::move(vec_key), std::move(vec_value.value()));
+#ifndef NDEBUG
+            LOG(ERROR) << "Vector property: " << vec_prop_index
+                       << ", key: " << folly::hexlify(vectorData.back().first)
+                       << ", value: " << folly::hexlify(vectorData.back().second);
+#endif
+            vec_prop_index++;
+          }
+        } else {
+          for (auto& vec_prop_name : vectorPropNames) {
+            auto index = schema->getVectorFieldIndex(vec_prop_name);
+            auto vec_key = NebulaKeyUtils::vectorTagKey(spaceVidLen_, partId, vid, tagId, index);
+            auto vec_prop = (*opt_vec_props)[vec_prop_index++];
+            auto vec_value = encodeVectorRowVal(schema, vec_prop, index, wRet);
+            if (!vec_value.ok()) {
+              LOG(ERROR) << vec_value.status();
+              code = writeResultTo(wRet, false);
+              break;
+            }
+            vectorData.emplace_back(std::move(vec_key), std::move(vec_value.value()));
+#ifndef NDEBUG
+            LOG(ERROR) << "Vector property: " << vec_prop_index
+                       << ", key: " << folly::hexlify(vectorData.back().first)
+                       << ", value: " << folly::hexlify(vectorData.back().second);
+#endif
+          }
+        }
       }
-    }
-    if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
-      handleAsync(spaceId_, partId, code);
-    } else {
-      stats::StatsManager::addValue(kNumVerticesInserted, data.size());
-      doPut(spaceId_, partId, std::move(data));
+      if (code != nebula::cpp2::ErrorCode::SUCCEEDED) {
+        handleAsync(spaceId_, partId, code);
+      } else {
+        stats::StatsManager::addValue(kNumVerticesInserted, data.size());
+        doPut(spaceId_, partId, std::move(data));
+        if (hasVectorProp) {
+          doPut(NebulaKeyUtils::kVectorColumnFamilyName, spaceId_, partId, std::move(vectorData));
+        }
+      }
     }
   }
 }

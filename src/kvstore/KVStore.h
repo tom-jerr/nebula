@@ -133,6 +133,13 @@ class KVStore {
                                       std::string* value,
                                       bool canReadFromFollower = false,
                                       const void* snapshot = nullptr) = 0;
+  virtual nebula::cpp2::ErrorCode get(GraphSpaceID spaceId,
+                                      PartitionID partId,
+                                      const std::string& key,
+                                      std::string* value,
+                                      const std::string& cfName,
+                                      bool canReadFromFollower = false,
+                                      const void* snapshot = nullptr) = 0;
 
   /**
    * @brief Read a list of keys
@@ -198,11 +205,25 @@ class KVStore {
                                          std::unique_ptr<KVIterator>* iter,
                                          bool canReadFromFollower = false,
                                          const void* snapshot = nullptr) = 0;
+  virtual nebula::cpp2::ErrorCode prefix(const std::string& cfName,
+                                         GraphSpaceID spaceId,
+                                         PartitionID partId,
+                                         const std::string& prefix,
+                                         std::unique_ptr<KVIterator>* iter,
+                                         bool canReadFromFollower = false,
+                                         const void* snapshot = nullptr) = 0;
 
   /**
    * @brief To forbid to pass rvalue via the 'prefix' parameter.
    */
   virtual nebula::cpp2::ErrorCode prefix(GraphSpaceID spaceId,
+                                         PartitionID partId,
+                                         std::string&& prefix,
+                                         std::unique_ptr<KVIterator>* iter,
+                                         bool canReadFromFollower = false,
+                                         const void* snapshot = nullptr) = delete;
+  virtual nebula::cpp2::ErrorCode prefix(const std::string& cfName,
+                                         GraphSpaceID spaceId,
                                          PartitionID partId,
                                          std::string&& prefix,
                                          std::unique_ptr<KVIterator>* iter,
@@ -258,7 +279,11 @@ class KVStore {
                              PartitionID partId,
                              std::vector<KV>&& keyValues,
                              KVCallback cb) = 0;
-
+  virtual void asyncMultiPut(GraphSpaceID spaceId,
+                             PartitionID partId,
+                             std::vector<KV>&& keyValues,
+                             KVCallback cb,
+                             const std::string& cfName) = 0;
   /**
    * @brief Remove a key from kvstore asynchronously
    *
@@ -284,7 +309,11 @@ class KVStore {
                                 PartitionID partId,
                                 std::vector<std::string>&& keys,
                                 KVCallback cb) = 0;
-
+  virtual void asyncMultiRemove(GraphSpaceID spaceId,
+                                PartitionID partId,
+                                std::vector<std::string>&& keys,
+                                KVCallback cb,
+                                const std::string& cfName) = 0;
   /**
    * @brief Remove keys in range [start, end) asynchronously
    *

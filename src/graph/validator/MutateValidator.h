@@ -32,6 +32,7 @@ class InsertVerticesValidator final : public Validator {
   GraphSpaceID spaceId_{-1};
   std::vector<VertexRowItem*> rows_;
   std::unordered_map<TagID, std::vector<std::string>> tagPropNames_;
+  std::unordered_map<TagID, std::vector<std::string>> tagVectorPropNames_;
   std::vector<std::pair<TagID, TagSchema>> schemas_;
   uint16_t propSize_{0};
   bool ifNotExists_{false};

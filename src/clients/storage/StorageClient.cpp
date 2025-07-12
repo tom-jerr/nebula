@@ -151,7 +151,8 @@ StorageRpcRespFuture<cpp2::ExecResponse> StorageClient::addVertices(
     std::vector<cpp2::NewVertex> vertices,
     std::unordered_map<TagID, std::vector<std::string>> propNames,
     bool ifNotExists,
-    bool ignoreExistedIndex) {
+    bool ignoreExistedIndex,
+    std::unordered_map<TagID, std::vector<std::string>> vectorPropNames) {
   auto cbStatus = getIdFromNewVertex(param.space);
   if (!cbStatus.ok()) {
     return folly::makeFuture<StorageRpcResponse<cpp2::ExecResponse>>(
@@ -175,6 +176,7 @@ StorageRpcRespFuture<cpp2::ExecResponse> StorageClient::addVertices(
     req.ignore_existed_index_ref() = ignoreExistedIndex;
     req.parts_ref() = std::move(c.second);
     req.prop_names_ref() = propNames;
+    req.vector_prop_names_ref() = vectorPropNames;
     req.common_ref() = common;
   }
 

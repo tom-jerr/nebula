@@ -102,7 +102,8 @@ class StorageClient
       std::vector<cpp2::NewVertex> vertices,
       std::unordered_map<TagID, std::vector<std::string>> propNames,
       bool ifNotExists,
-      bool ignoreExistedIndex);
+      bool ignoreExistedIndex,
+      std::unordered_map<TagID, std::vector<std::string>> vectorPropNames);
 
   StorageRpcRespFuture<cpp2::ExecResponse> addEdges(const CommonRequestParam& param,
                                                     std::vector<cpp2::NewEdge> edges,

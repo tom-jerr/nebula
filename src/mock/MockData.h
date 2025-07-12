@@ -21,6 +21,7 @@ struct VertexData {
   VertexID vId_;
   TagID tId_;
   std::vector<Value> props_;
+  std::vector<Value> vector_props_;
 };
 
 struct EdgeData {
@@ -29,6 +30,11 @@ struct EdgeData {
   EdgeRanking rank_;
   VertexID dstId_;
   std::vector<Value> props_;
+};
+
+struct VectorElement {
+  int id_;
+  std::vector<float> values_;
 };
 
 struct Player {
@@ -84,6 +90,9 @@ class MockData {
   static std::shared_ptr<meta::NebulaSchemaProvider> mockTeammateEdgeSchema(SchemaVer ver = 0,
                                                                             bool hasProp = true);
 
+  static std::shared_ptr<meta::NebulaSchemaProvider> mockVectorTagSchema(SchemaVer ver = 0,
+                                                                         bool hasProp = true);
+
   static std::vector<nebula::meta::cpp2::ColumnDef> mockGeneralTagIndexColumns();
 
   static std::vector<nebula::meta::cpp2::ColumnDef> mockPlayerTagIndexColumns();
@@ -111,6 +120,7 @@ class MockData {
   // Construct data in the order of schema
   // generate player and team tag
   static std::vector<VertexData> mockVertices(bool upper = false);
+  static std::vector<VertexData> mockVectorVertices();
 
   static std::vector<std::pair<PartitionID, std::string>> mockPlayerIndexKeys(bool upper = false);
 
@@ -155,7 +165,7 @@ class MockData {
   // Construct data in the specified order
   // For convenience, here is the reverse order
   static std::vector<VertexData> mockVerticesSpecifiedOrder();
-
+  static std::vector<VertexData> mockVectorVerticesSpecifiedOrder();
   static std::vector<EdgeData> mockEdgesSpecifiedOrder();
 
   static std::unordered_map<PartitionID, std::vector<VertexData>> mockVerticesofPart(
@@ -169,6 +179,8 @@ class MockData {
   static nebula::storage::cpp2::AddVerticesRequest mockAddVerticesReq(bool upper = false,
                                                                       int32_t parts = 6);
 
+  static nebula::storage::cpp2::AddVerticesRequest mockAddVectorVerticesReq(int32_t parts = 6);
+
   static nebula::storage::cpp2::AddEdgesRequest mockAddEdgesReq(bool upper = false,
                                                                 int32_t parts = 6,
                                                                 bool hasInEdges = true);
@@ -179,7 +191,8 @@ class MockData {
 
   static nebula::storage::cpp2::AddVerticesRequest mockAddVerticesSpecifiedOrderReq(
       int32_t parts = 6);
-
+  static nebula::storage::cpp2::AddVerticesRequest mockAddVectorVerticesSpecifiedOrderReq(
+      int32_t parts = 6);
   static nebula::storage::cpp2::AddEdgesRequest mockAddEdgesSpecifiedOrderReq(int32_t parts = 6);
 
   /*
@@ -199,6 +212,8 @@ class MockData {
   static std::vector<Serve> serves_;
 
   static std::vector<Teammate> teammates_;
+
+  static std::vector<VectorElement> vectors_;
 
   // player name -> list<Serve>
   static std::unordered_map<std::string, std::vector<Serve>> playerServes_;

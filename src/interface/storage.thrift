@@ -326,6 +326,7 @@ struct GetPropResponse {
 struct NewTag {
     1: common.TagID         tag_id,
     2: list<common.Value>   props,
+    3: optional list<common.Value> vec_props,
 }
 
 
@@ -365,6 +366,8 @@ struct AddVerticesRequest {
     4: bool                                     if_not_exists,
     5: bool                                     ignore_existed_index = false,
     6: optional RequestCommon                   common,
+    7: optional map<common.TagID, list<binary>>
+        (cpp.template = "std::unordered_map")   vector_prop_names,
 }
 
 struct AddEdgesRequest {
