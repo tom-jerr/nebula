@@ -265,6 +265,7 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
                   << ", val = " << folly::hexlify(kvs[i + 1]);
           nebula::cpp2::ErrorCode code = nebula::cpp2::ErrorCode::SUCCEEDED;
           if (NebulaKeyUtils::isVector(kvs[i].str())) {
+            LOG(ERROR) << "Put vector key: " << folly::hexlify(kvs[i]);
             code = batch->put(NebulaKeyUtils::kVectorColumnFamilyName, kvs[i], kvs[i + 1]);
           } else if (NebulaKeyUtils::isIdVidCf(kvs[i].str())) {
             code = batch->put(NebulaKeyUtils::kIdVidTagColumnFamilyName, kvs[i], kvs[i + 1]);
@@ -330,6 +331,7 @@ std::tuple<nebula::cpp2::ErrorCode, LogID, TermID> Part::commitLogs(
           auto code = nebula::cpp2::ErrorCode::SUCCEEDED;
           if (op.first == BatchLogType::OP_BATCH_PUT) {
             if (NebulaKeyUtils::isVector(op.second.first.str())) {
+              LOG(ERROR) << "Put vector key: " << folly::hexlify(op.second.first);
               code = batch->put(
                   NebulaKeyUtils::kVectorColumnFamilyName, op.second.first, op.second.second);
             } else if (NebulaKeyUtils::isIdVidCf(op.second.first.str())) {

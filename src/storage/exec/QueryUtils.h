@@ -109,6 +109,7 @@ class QueryUtils final {
       const auto& fixedStr = value.getStr();
       return fixedStr.substr(0, fixedStr.find_first_of('\0'));
     }
+    LOG(ERROR) << "Query Read Prop name: " << propName << ", value: " << value.toString();
     return value;
   }
 
@@ -253,13 +254,15 @@ class QueryUtils final {
                                    nebula::List& list,
                                    StorageExpressionContext* expCtx = nullptr,
                                    const std::string& tagName = "") {
+    LOG(ERROR) << "collect props for tag: " << tagName;
     for (const auto& prop : *props) {
       if (!(prop.returned_ || (prop.filtered_ && expCtx != nullptr)) || prop.isVector()) {
         continue;
       }
       auto value = QueryUtils::readVertexProp(key, vIdLen, isIntId, reader, prop);
       NG_RETURN_IF_ERROR(value);
-      LOG(ERROR) << "Query Collect Prop: " << value.value().toString();
+      LOG(ERROR) << "Query Collect Prop name: " << prop.name_
+                 << ", value: " << value.value().toString();
       if (prop.returned_) {
         VLOG(2) << "Collect prop " << prop.name_;
         list.emplace_back(value.value());

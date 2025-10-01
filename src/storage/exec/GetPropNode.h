@@ -117,6 +117,7 @@ class GetTagPropNode : public QueryNode<VertexID> {
       ret = tagNode->collectTagPropsIfValid(
           [&row, tagNode, this](const std::vector<PropContext>* props) -> nebula::cpp2::ErrorCode {
             for (const auto& prop : *props) {
+              LOG(ERROR) << "Collect null value Prop name: " << prop.name_;
               if (prop.returned_) {
                 row.emplace_back(Value());
               }
@@ -141,6 +142,7 @@ class GetTagPropNode : public QueryNode<VertexID> {
         return ret;
       }
       auto vecSize = tagNode->vectorKeys().size();
+      LOG(ERROR) << "Tag " << tagNode->getTagName() << " has vector prop size " << vecSize;
       if (vecSize == 0) {
         continue;
       }

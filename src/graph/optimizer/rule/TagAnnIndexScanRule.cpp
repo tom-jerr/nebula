@@ -167,14 +167,8 @@ StatusOr<OptRule::TransformResult> runTransform(OptContext* ctx,
 
   // Create new AppendVertices node that depends on AnnIndexScan
   auto newAppendVertices = static_cast<GetVertices*>(appendVertices->clone());
-  // Ensure previous input columns (e.g., _vid, _dis) are kept along with appended vertex data
-  // so that distance score from AnnIndexScan can flow through.
-  if (newAppendVertices->kind() == graph::PlanNode::Kind::kAppendVertices) {
-    static_cast<graph::AppendVertices*>(newAppendVertices)->setTrackPrevPath(true);
-  }
   newAppendVertices->setInputVar(newAnnIndexScan->outputVar());
-  // 显式设置 AppendVertices 的输出列名包含 _dis，使其更直观
-  newAppendVertices->setColNames({std::string("v"), kDis});
+  newAppendVertices->setColNames({std::string("v"), kDis});  // add _dis to output columns
   auto newAppendVerticesGroup = OptGroup::create(ctx);
   auto newAppendVerticesGroupNode = newAppendVerticesGroup->makeGroupNode(newAppendVertices);
   newAppendVerticesGroupNode->dependsOn(newScanGroup);

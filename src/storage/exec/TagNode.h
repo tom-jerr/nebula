@@ -6,8 +6,11 @@
 #ifndef STORAGE_EXEC_TAGNODE_H_
 #define STORAGE_EXEC_TAGNODE_H_
 
+#include <iterator>
+
 #include "codec/RowReaderWrapper.h"
 #include "common/base/Base.h"
+#include "common/utils/NebulaKeyUtils.h"
 #include "storage/exec/RelNode.h"
 #include "storage/exec/StorageIterator.h"
 
@@ -73,15 +76,21 @@ class TagNode final : public IterateNode<VertexID> {
         ret != nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND) {
       return ret;
     }
-    LOG(ERROR) << "partId: " << partId << ", vId: " << vId << ", tagId: " << tagId_;
-    if (schemas_->back()->hasVectorCol()) {
+    size_t schemaIndex = 0;
+    auto it = std::find_if(schemas_->begin(), schemas_->end(), [](const auto& schema) {
+      return schema->hasVectorCol();
+    });
+    if (it != schemas_->end()) {
+      schemaIndex = std::distance(schemas_->begin(), it);
       auto vecIndex = 0;
       for (int32_t i = 0; i < static_cast<int32_t>(props_->size()); i++) {
         auto prop = props_->at(i);
         if (prop.isVector()) {
-          auto index = schemas_->back()->getVectorFieldIndex(prop.name());
+          auto index = schemas_->at(schemaIndex)->getVectorFieldIndex(prop.name());
+          auto tagId = NebulaKeyUtils::getTagId(context_->vIdLen(), key_);
+          LOG(ERROR) << "Vid: " << vId << ", TagId: " << tagId;
           auto vecKey = NebulaKeyUtils::vectorTagKey(
-              context_->vIdLen(), partId, vId, tagId_, static_cast<int32_t>(index));
+              context_->vIdLen(), partId, vId, tagId, static_cast<int32_t>(index));
           std::string vecVal;
           ret = context_->env()->kvstore_->get(context_->spaceId(), partId, vecKey, &vecVal);
           if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
@@ -96,13 +105,13 @@ class TagNode final : public IterateNode<VertexID> {
             vecPropsIndexMap_.clear();
             return nebula::cpp2::ErrorCode::SUCCEEDED;
           } else {
+            LOG(ERROR) << "Vector prop not found, key: " << folly::hexlify(vecKey);
             return ret;
           }
         }
       }
     }
     if (ret == nebula::cpp2::ErrorCode::E_KEY_NOT_FOUND && vectorValues_.empty()) {
-      LOG(ERROR) << "Part " << partId << " not found";
       return nebula::cpp2::ErrorCode::SUCCEEDED;
     } else if (ret == nebula::cpp2::ErrorCode::SUCCEEDED) {
       doExecute(key_, value_, vectorKeys_, vectorValues_, vectorIndexes_);
@@ -196,6 +205,9 @@ class TagNode final : public IterateNode<VertexID> {
 
   std::vector<folly::StringPiece> vectorKeys() const override {
     std::vector<folly::StringPiece> ret;
+    if (vectorKeys_.empty()) {
+      return ret;
+    }
     for (auto& key : vectorKeys_) {
       ret.emplace_back(key);
     }
@@ -204,6 +216,9 @@ class TagNode final : public IterateNode<VertexID> {
 
   std::vector<folly::StringPiece> vectorValues() const override {
     std::vector<folly::StringPiece> ret;
+    if (vectorValues_.empty()) {
+      return ret;
+    }
     for (auto& value : vectorValues_) {
       ret.emplace_back(value);
     }

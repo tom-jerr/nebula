@@ -41,6 +41,7 @@ class GetPropExecutor : public StorageAccessExecutor {
       DCHECK_EQ(colNames.size(), v.colSize());
       v.colNames = colNames;
     }
+    LOG(ERROR) << "GetPropExecutor column names: " << folly::join(",", v.colNames);
     return finish(
         ResultBuilder().value(std::move(v)).iter(Iterator::Kind::kProp).state(state).build());
   }
